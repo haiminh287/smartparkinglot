@@ -1,0 +1,74 @@
+[
+  {
+    "model": "parkinglot.carslot",
+    "pk": 1,
+    "fields": {
+      "code": "A1",
+      "zone": 1,
+      "is_available": true
+    }
+  },
+  {
+    "model": "parkinglot.carslot",
+    "pk": 2,
+    "fields": {
+      "code": "A2",
+      "zone": 1,
+      "is_available": true
+    }
+  },
+  {
+    "model": "parkinglot.carslot",
+    "pk": 3,
+    "fields": {
+      "code": "A3",
+      "zone": 1,
+      "is_available": false
+    }
+  },
+  {
+    "model": "parkinglot.carslot",
+    "pk": 4,
+    "fields": {
+      "code": "B1",
+      "zone": 1,
+      "is_available": true
+    }
+  },
+  {
+    "model": "parkinglot.carslot",
+    "pk": 5,
+    "fields": {
+      "code": "B2",
+      "zone": 1,
+      "is_available": false
+    }
+  },
+  {
+    "model": "parkinglot.carslot",
+    "pk": 6,
+    "fields": {
+      "code": "C1",
+      "zone": 1,
+      "is_available": true
+    }
+  },
+  {
+    "model": "parkinglot.carslot",
+    "pk": 7,
+    "fields": {
+      "code": "C2",
+      "zone": 1,
+      "is_available": true
+    }
+  },
+  {
+    "model": "parkinglot.carslot",
+    "pk": 8,
+    "fields": {
+      "code": "C3",
+      "zone": 1,
+      "is_available": false
+    }
+  }
+]
