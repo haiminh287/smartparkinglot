@@ -35,10 +35,23 @@ def format_reply_to_text(reply_json):
             slot_lines = [f"- Mã chỗ: {slot['code']} (ID: {slot['id']})" for slot in reply_json["available_slots"]]
             result.append("Danh sách chỗ trống:\n" + "\n".join(slot_lines))
         return "\n".join(result)
+    
+    if isinstance(reply_json, dict) and "floors" in reply_json:
+        if reply_json["full"]:
+            return "❌ Hiện tại tất cả các slot đều đã đầy."
+        else:
+            lines = ["📊 Tình trạng chỗ trống hiện tại:"]
+            for floor in reply_json["floors"]:
+                lines.append(f"🧭 Tầng {floor['floor']}:")
+                for zone in floor["zones"]:
+                    lines.append(
+                        f"  - Zone {zone['zone']} ({zone['vehicle_type']}): còn {zone['available_slots']} slot."
+                    )
+            return "\n".join(lines)
+
 
     return str(reply_json)
 
-# --- Helper: tính end date theo gói ---
 def _calc_end_date(start_date, package_type):
     if package_type == "weekly":
         return start_date + timedelta(days=6)
@@ -47,7 +60,6 @@ def _calc_end_date(start_date, package_type):
     return start_date
 
 
-# --- Function: tính slot khả dụng ---
 def get_available_slots(date, package_type, floor_level, license_plate=None):
     start_date = parse_date(date)
     if not start_date:
@@ -62,7 +74,6 @@ def get_available_slots(date, package_type, floor_level, license_plate=None):
     except Floor.DoesNotExist:
         return {"error": "Không tìm thấy tầng"}
 
-    # Lấy vehicle từ biển số
     vehicle = Vehicle.objects.filter(license_plate=license_plate).first()
     if not vehicle:
         return {"error": f"Không tìm thấy thông tin xe với biển số {license_plate}"}
@@ -170,11 +181,98 @@ def book_slot(date=None, package_type=None, floor_level=None, slot_id=None, user
 
     return {"success": True, "booking_id": booking.id}
 
+from datetime import datetime, time
+from django.utils.dateparse import parse_date
+from parkinglot.models import Floor, CarSlot, Zone
+from booking_app.models import Booking
+from django.db.models import Exists, OuterRef, Q, Count
 
-# --- Tool mapping để Gemini gọi function ---
+
+def get_overall_slot_status(floor_level=None, vehicle_type=None, date=None):
+    result = {
+        "full": True,
+        "floors": []
+    }
+
+    if not date:
+        date_obj = datetime.today().date()
+    else:
+        date_obj = parse_date(date)
+        if not date_obj:
+            return {"error": "Ngày không hợp lệ"}
+
+    start_dt = datetime.combine(date_obj, time.min)
+    end_dt = datetime.combine(date_obj, time.max)
+
+    floor_qs = Floor.objects.all()
+    if floor_level is not None:
+        floor_qs = floor_qs.filter(level=floor_level)
+
+    floor_qs = floor_qs.prefetch_related("zones__slots")
+
+    for floor in floor_qs:
+        floor_data = {
+            "floor": floor.level,
+            "zones": []
+        }
+
+        zones = floor.zones.all()
+        if vehicle_type:
+            zones = zones.filter(vehicle_type=vehicle_type)
+
+        for zone in zones:
+            if zone.vehicle_type.lower() == "car":
+                # Đối với xe hơi → lọc CarSlot
+                slots = zone.slots.annotate(
+                    is_booked=Exists(
+                        Booking.objects.filter(
+                            car_slot=OuterRef("pk"),
+                            start_time__lte=end_dt,
+                            end_time__gte=start_dt
+                        )
+                    )
+                ).filter(is_available=True, is_booked=False)
+
+                if slots.exists():
+                    result["full"] = False
+                    floor_data["zones"].append({
+                        "zone": zone.name,
+                        "vehicle_type": "car",
+                        "available_slots": slots.count(),
+                        "slot_codes": list(slots.values_list("code", flat=True))
+                    })
+
+            elif zone.vehicle_type.lower() == "motorbike":
+                # Đối với xe máy → tính theo capacity - số booking đã dùng zone
+                active_bookings_count = Booking.objects.filter(
+                    zone=zone,
+                    start_time__lte=end_dt,
+                    end_time__gte=start_dt
+                ).count()
+
+                available_slots = zone.capacity - active_bookings_count
+
+                if available_slots > 0:
+                    result["full"] = False
+                    floor_data["zones"].append({
+                        "zone": zone.name,
+                        "vehicle_type": "motorbike",
+                        "available_slots": available_slots,
+                        "slot_codes": []  
+                    })
+
+        if floor_data["zones"]:
+            result["floors"].append(floor_data)
+
+    return result
+
+
+
+
 TOOLS = {
     "get_available_slots": get_available_slots,
     "book_slot": book_slot,
+    "get_overall_slot_status": get_overall_slot_status,
 }
 
 
@@ -225,6 +323,10 @@ Vai trò của bạn:
 5. Nếu thiếu thông tin (ví dụ: thiếu tầng, ngày, biển số...), bạn cần hỏi lại để lấy đủ thông tin.
 
 6. Tránh trả lời lan man. Luôn tập trung vào nhiệm vụ chính: hỗ trợ đặt chỗ giữ xe.
+7. Nếu người dùng hỏi tình trạng chung: "Còn slot tầng 1 không?", "Chỗ cho xe hơi còn không?", hoặc "Hiện tại chỗ nào còn trống?"
+→ bạn phải gọi:
+{"tool": "get_overall_slot_status", "args": {"floor_level": 1, "vehicle_type": "car"}}  # hoặc bỏ args nếu không rõ
+8. Luôn trả lời bằng tiếng Việt.
 """
 
 

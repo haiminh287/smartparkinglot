@@ -11,7 +11,8 @@ def get_qr_momo(order_id, amount, redriectUrl, ipUrl):
     secretKey = "K951B6PE1waDMi640xX08PD3vg6EkVlz"
     orderInfo = f"Mã đơn hàng: #{str(order_id)}"
     redirectUrl = f"http://localhost:3000{redriectUrl}"
-    ipnUrl = f"http://localhost:3000{ipUrl}ip"
+    # ipnUrl = f"https://88918d3dc16c.ngrok-free.app{ipUrl}ip"
+    ipnUrl = f"http://172.18.77.40:8000/api/cameras/{ipUrl}/"
     amount = str(int(amount))
     extraData = str(order_id)
     orderId = str(uuid.uuid4())

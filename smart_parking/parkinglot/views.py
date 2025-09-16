@@ -1,11 +1,11 @@
 from rest_framework import viewsets, permissions, generics
-from .models import ParkingLot, Floor, Zone, CarSlot, Camera
+from parkinglot.models import ParkingLot, Floor, Zone, CarSlot, Camera,MapNode
 from django.db.models import Q, Exists, OuterRef, F, Count
 
 from booking_app.models import PackageType, Booking
 from django.utils.dateparse import parse_date
 from datetime import timedelta, datetime, time
-from .serializers import ParkingLotSerializer, FloorSerializer, ZoneSerializer, CarSlotSerializer, CameraSerializer
+from parkinglot.serializers import ParkingLotSerializer, FloorSerializer, ZoneSerializer, CarSlotSerializer, CameraSerializer, MapNodeSerializer
 
 
 class ParkingLotViewSet(viewsets.ViewSet, generics.ListAPIView):
@@ -48,7 +48,7 @@ class ZoneViewSet(viewsets.ViewSet, generics.ListAPIView):
         if package_type and date_str:
             start_date = parse_date(date_str)
             if start_date:
-                # Tính end_date theo loại gói
+                
                 if package_type == PackageType.WEEKLY:
                     end_date = start_date + timedelta(days=6)
                 elif package_type == PackageType.MONTHLY:
@@ -76,7 +76,6 @@ class ZoneViewSet(viewsets.ViewSet, generics.ListAPIView):
                         "capacity") - F("active_bookings") - F("unavailable_slots")
                 )
         else:
-            # Trường hợp không có filter thời gian → chỉ trừ slot không available
             queryset = queryset.annotate(
                 unavailable_slots=Count("slots", filter=Q(
                     slots__is_available=False), distinct=True),
@@ -96,6 +95,10 @@ class CarSlotViewSet(viewsets.ViewSet, generics.ListAPIView):
         queryset = self.queryset
         params = self.request.query_params
 
+        floor_id = params.get("floor_id")
+        if floor_id:
+            queryset = queryset.filter(zone__floor_id=floor_id)
+
         zone_id = params.get("zone")
         if zone_id:
             queryset = queryset.filter(zone_id=zone_id)
@@ -107,7 +110,6 @@ class CarSlotViewSet(viewsets.ViewSet, generics.ListAPIView):
         if package_type and date_str:
             start_date = parse_date(date_str)
             if start_date:
-                # Tính end_date
                 if package_type == PackageType.WEEKLY:
                     end_date = start_date + timedelta(days=6)
                 elif package_type == PackageType.MONTHLY:
@@ -117,7 +119,7 @@ class CarSlotViewSet(viewsets.ViewSet, generics.ListAPIView):
                 else:
                     end_date = start_date
 
-                # Ép datetime cho chính xác
+                
                 start_datetime = datetime.combine(start_date, time.min)
                 end_datetime = datetime.combine(end_date, time.max)
 
@@ -139,3 +141,23 @@ class CameraViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Camera.objects.all()
     serializer_class = CameraSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+
+class MapNodeViewSet(viewsets.ViewSet, generics.ListAPIView):
+    queryset = MapNode.objects.all()
+    serializer_class = MapNodeSerializer
+    # permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = self.queryset
+        floor_id = self.request.query_params.get("floor_id")
+        if floor_id:
+            queryset = queryset.filter(floor=floor_id)
+        type = self.request.query_params.get("type")
+        if type:
+            queryset = queryset.filter(node_type=type)
+        return queryset
+    
+
+
+

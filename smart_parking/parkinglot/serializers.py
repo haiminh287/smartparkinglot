@@ -23,8 +23,14 @@ class ZoneSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class CameraSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Camera
+        fields = "__all__"
+
 class CarSlotSerializer(serializers.ModelSerializer):
     is_booked = serializers.BooleanField(read_only=True)
+    camera = CameraSerializer(read_only=True)
 
     class Meta:
         model = models.CarSlot
@@ -36,9 +42,11 @@ class CarSlotSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "❌ Chỉ được thêm CarSlot vào Zone ô tô!")
         return attrs
-
-
-class CameraSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.Camera
+    
+class MapNodeSerializer(serializers.ModelSerializer):
+    class Meta :
+        model = models.MapNode
         fields = "__all__"
+
+
+

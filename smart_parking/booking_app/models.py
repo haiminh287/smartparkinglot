@@ -31,6 +31,7 @@ class CheckInStatus(models.TextChoices):
     CHECKED_IN = "checked_in", "Đã check-in"
     NOT_CHECKED_IN = "not_checked_in", "Chưa check-in"
     CHECKED_OUT = "checked_out", "Đã check-out"
+    PARKED = "parked", "Đã đậu vào chỗ đậu xe"
 
 
 class PaymentStatus(models.TextChoices):
@@ -75,3 +76,19 @@ class Booking(BaseModel):
 
     def __str__(self):
         return f"{self.id} - {self.vehicle.license_plate} | {self.start_time.date()}"
+
+class RFIDTag(models.Model):
+    rfid_code = models.CharField(max_length=100, unique=True)
+    is_used = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"RFID {self.rfid_code}"
+
+class BookingRFID(models.Model):
+    booking = models.OneToOneField(Booking, on_delete=models.CASCADE, related_name='rfid_info')
+    rfid_tag = models.OneToOneField(RFIDTag, on_delete=models.CASCADE, related_name='booking_info')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"RFID {self.rfid_code} for booking {self.booking.id}"
+    
