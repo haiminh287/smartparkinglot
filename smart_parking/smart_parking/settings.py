@@ -106,7 +106,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'smart_parkingdb',
         'USER': 'root',
-        'PASSWORD': 'Marcus0@',
+        'PASSWORD': 'test',
         'HOST': '',
     }
 }
@@ -173,8 +173,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 cloudinary.config(
-    cloud_name="dsz7vteia",
-    api_key="774455388139965",
-    api_secret="yXGHnHKBber3v-Ld6g4b_kk8PPo",
+    cloud_name="test",
+    api_key="test",
+    api_secret="test",
     secure=True
 )
