@@ -13,7 +13,7 @@ from rest_framework import viewsets, generics
 
 
 
-genai.configure(api_key="AIzaSyDVjpI4hd739ZABaq7fTjzrHcl3aiupfPk")
+genai.configure(api_key="test")
 model = genai.GenerativeModel("gemini-2.5-flash")
 
 
